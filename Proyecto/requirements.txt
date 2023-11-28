@@ -1,0 +1,14 @@
+folium
+keras
+keras-preprocessing
+keras-tuner
+matplotlib
+numpy
+pandas
+plotly
+scikeras[tensorflow]
+scikit-learn
+seaborn
+sodapy
+streamlit
+streamlit_folium
