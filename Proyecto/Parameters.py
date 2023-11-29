@@ -9,7 +9,7 @@ class Parameters:
         # self.main_title = "Pronóstico de temperatura del aire a 2 metros"
         # self.main_description = """Este es el pronóstico de la temperatura del aire basado en los datos del IDEAM. """
         self.form_title_lbl = "Parametros"
-        self.form_subtitle1_lbl = f"Para la estación de monitoreo"
+        self.form_subtitle1_lbl = f""
         self.form_subtitle2_lbl = f"Temporalidad del análisis"
         self.processing_lbl = "Procesando datos...."
         self.subtitle_lbl = "A continuación los resultados..."
