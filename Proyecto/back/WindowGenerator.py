@@ -292,14 +292,17 @@ class WindowGenerator():
     print("predict ->")
     self.y_pred = None
     self.set_model(model)
+    print(self.model)
 
     # Calcular predicción escalada en el rango de -1 a 1
     # self.X_test = self.x_ts_s
     y_pred_s = self.model.predict(self.X_test, verbose=0)
 
-    # Llevar la predicción a la escala original
-    y_pred = self.scaler.inverse_transform(y_pred_s)
-    self.y_pred = y_pred.flatten()
+    return y_pred_s
+
+    ## Llevar la predicción a la escala original
+    #y_pred = self.scaler.inverse_transform(y_pred_s)
+    #self.y_pred = y_pred.flatten()
 
     return self.y_pred
 

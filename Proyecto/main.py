@@ -127,20 +127,24 @@ with st.form(key='FilterForm'):
                             print(y_pred_s.flatten())
                             print("Predicciones OK")
                             column_values = ['value']
-                            df = pd.DataFrame(data=y_pred_s, columns = column_values)
+                            df = pd.DataFrame(data=y_pred_s, columns=column_values)
                             df.reset_index()
                             print(df.dtypes)
-                            print(df)
+                            print(df.index)
+                            print(df["value"])
                             fig = px.line(df, x=df.index, y="value", title='Temperatura')
                             st.pyplot(fig)
                         except:
                             pred_error_msg
 
                     with row_03_col2:
-                        ":chart_with_upwards_trend: Métricas"
+                        ""
                         try:
                             #st.dataframe(metrics)
-                            st.empty()
+                            print("Inicia predicción")
+                            bm_window.predict(model_prd)
+                            print("Visualiza predicción")
+                            st.pyplot(bm_window.plot_error_predictions())
                         except:
                             pred_error_msg
             else:
