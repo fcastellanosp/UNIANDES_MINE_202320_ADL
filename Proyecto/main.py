@@ -103,7 +103,7 @@ with st.form(key='FilterForm'):
                     # "Datos de las temperaturas"
                     with row_01_col2:
                         ":memo: Distribución de los datos de entrada"
-                        st.pyplot(bm_window.plot_violin_dist())
+                        st.pyplot(bm_window.plot_violin_dist(True))
 
                     with row_02_col1:
                         ":memo: Ejemplo de ventana de tiempo"

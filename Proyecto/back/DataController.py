@@ -183,7 +183,7 @@ class DataController:
         INPUT_LENGTH = 24    # Registros de 24 horas consecutivas a la entrada
         OUTPUT_LENGTH = 1    # El modelo va a predecir 1 hora a futuro
         bm_window = WindowGenerator(data_df, "MinTemp", INPUT_LENGTH, OUTPUT_LENGTH, multimodal=True)
-        return bm_window.plot_violin_dist()
+        return bm_window.plot_violin_dist(True)
 
     def predict(self, data, station_code="0021205012", hour=12):
         model_name = f"{station_code}_h{hour}"
