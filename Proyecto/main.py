@@ -31,11 +31,6 @@ if "zoom" not in st.session_state:
 # st.title(" 📰 {}".format(lbl.main_title))
 st.set_page_config(page_icon="🌡️", layout="wide", initial_sidebar_state="expanded")
 
-# Visualizar las estaciones actuales
-def show_stations(l1_sel, l2_sel, l3_sel):
-    print("station_l3_options ->")
-
-
 # Presentación de resultados
 row_01_col1, row_01_col2 = st.columns(2)
 row_02_col1, row_02_col2 = st.columns(2)
@@ -66,7 +61,7 @@ with st.form(key='FilterForm'):
 
             input_data_ok = True
             date_diff = ending_date - initial_date
-            if date_diff.days < 90:
+            if date_diff.days < param.min_instances:
                 input_data_ok = False
 
             print(f"input_data_ok: {input_data_ok}")
@@ -98,7 +93,7 @@ with st.form(key='FilterForm'):
                         ":violin: Distribución de los datos de entrada"
                         # st.pyplot(bm_window.plot_violin_dist(True))
 
-                        violin_fig = px.violin(temp_df, box=True)
+                        violin_fig = px.violin(bm_window.data_s_df, box=False)
                         st.plotly_chart(violin_fig)
 
                     with row_02_col2:
@@ -122,25 +117,12 @@ with st.form(key='FilterForm'):
                         try:
                             ":chart_with_upwards_trend: Predicciones :chart_with_upwards_trend:"
                             print("Predicciones")
-                            #y_pred_s = model_prd.predict(bm_window.X_test, verbose=0)
                             y_pred = bm_window.predict(model_prd)
                             print(y_pred.shape)
-                            print(bm_window.y_ts.shape)
-                            print(y_pred)
-                            print(y_pred.flatten())
-                            #y_pred = prd_scaler.inverse_transform(y_pred_s)
-                            #y_pred = bm_window.scaler.inverse_transform(y_pred_s)
-                            #print("Escalado ok")
-                            #print(y_pred)
-                            #y_pred = list(y_pred.flatten())
-                            #print(y_pred)
-
-                            print(bm_window.y_ts)
-                            #y = bm_window.scaler.inverse_transform(bm_window.y_ts[:, :, 0])
+                            print(bm_window.Y.shape)
                             print("Datos escalados")
-                            y = bm_window.y_ts.flatten()
-                            print(y)
-                            print("Flatten ok")
+                            y = bm_window.Y.flatten()
+
                             data = {"Y": y, "Prediccion": y_pred}
                             pred_df = pd.DataFrame(data)
                             pred_df["Hora"] = list(range(0, len(y_pred)))
@@ -163,7 +145,6 @@ with st.form(key='FilterForm'):
                             #print("An exception occurred:", error)
                             st.text(pred_error_msg)
                             st.text(error)
-
 
                     with row_03_col2:
                         ""
