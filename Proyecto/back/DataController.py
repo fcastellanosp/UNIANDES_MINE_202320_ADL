@@ -1,14 +1,12 @@
 import Definitions
-import math
-import numpy as np
 import pandas as pd
-import os
 import os.path as osp
 
 from back.WindowGenerator import WindowGenerator
 
 from datetime import datetime
 from datetime import timedelta
+from keras.models import load_model
 from sodapy import Socrata
 
 
@@ -31,7 +29,10 @@ class DataController:
         self.date_format = '%Y-%m-%d'
         self.date_hour_format = '%Y-%m-%d %H'
         self.datetime_format = '%m/%d/%y %H:%M:%S'
-        # self.prd_scaler = MinMaxScaler(feature_range=(0, 1))
+        self.model_prd = None
+        self.bm_window = None
+        self.data_df = None
+        self.y_pred = None
 
     # Obtener el query a Open Data
     def query_values(self, dataset_id="", start_date="2022-08-01", ending_date="2023-02-02"):
@@ -51,11 +52,11 @@ class DataController:
         mint_df_ = None
         while (current_time < ending_date_):
             try:
-              #Prepara el intervalo de fecha
+              # Prepara el intervalo de fecha
               from_time = current_time
               current_time = current_time + timedelta(days=60)
               to_time = current_time
-              #Genera la consulta al servicio
+              # Genera la consulta al servicio
               query = f"municipio = '{city}' AND fechaobservacion >= '{from_time.strftime(self.date_format)}' AND fechaobservacion < '{to_time.strftime(self.date_format)}'"
               results = client.get(dataset_id, select=",".join(self.query_columns), where=query, limit=self.max_results_count)
 
@@ -78,7 +79,7 @@ class DataController:
         del mint_df_
         return mint_df
         
-    # Consultar las temperaturas mínimas
+    # Consultar las temperaturas mínimas en un rango de fechas
     def query_mint_values(self, start_date="2022-08-01", ending_date="2023-02-02"):
         print(f"query_mint_values(start_date={start_date},ending_date={ending_date})")
         dataset_id = self.mint_ds_id
@@ -92,7 +93,7 @@ class DataController:
         
         return new_mint_rs_df
     
-    # Consultar las temperaturas máximas
+    # Consultar las temperaturas máximas en un rango de fechas
     def query_maxt_values(self, start_date="2022-08-01", ending_date="2023-02-02"):
         print(f"query_maxt_values(start_date={start_date},ending_date={ending_date})")
         dataset_id = self.maxt_ds_id
@@ -106,7 +107,7 @@ class DataController:
         
         return new_maxt_rs_df
     
-    # Consultar las humedad
+    # Consultar las humedad en un rango de fechas
     def query_hum_values(self, start_date="2022-08-01", ending_date="2023-02-02"):
         print(f"query_hum_values(start_date={start_date},ending_date={ending_date})")
         dataset_id = self.hum_ds_id
@@ -120,7 +121,7 @@ class DataController:
         
         return new_hum_rs_df
        
-    # Consultar la velocidad del viento
+    # Consultar la velocidad del viento en un rango de fechas
     def query_wind_values(self, start_date="2022-08-01", ending_date="2023-02-02"):
         print(f"query_wind_values(start_date={start_date},ending_date={ending_date})")
         dataset_id = self.wind_ds_id
@@ -134,7 +135,7 @@ class DataController:
         
         return new_wind_rs_df
     
-    # Consultar la precipitación
+    # Consultar la precipitación en un rango de fechas
     def query_prec_values(self, start_date="2022-08-01", ending_date="2023-02-02"):
         print(f"query_prec_values(start_date={start_date},ending_date={ending_date})")
         dataset_id = self.prec_ds_id
@@ -147,7 +148,8 @@ class DataController:
         new_prec_rs_df.reset_index().set_index('Date')        
         
         return new_prec_rs_df
-        
+
+    # Prepara el set de datos con variables y covariables
     def query_data(self, start_date="2022-08-01", ending_date="2023-02-02"):
         print(f"query_data(start_date={start_date},ending_date={ending_date})")
         start_date_ = datetime.strptime(start_date, "%Y-%m-%d")        
@@ -175,18 +177,72 @@ class DataController:
         new_train_df        
         
         return new_train_df
-        
-    def plot_violin_dist(self, data_df):
-        INPUT_LENGTH = 24    # Registros de 24 horas consecutivas a la entrada
-        OUTPUT_LENGTH = 1    # El modelo va a predecir 1 hora a futuro
-        bm_window = WindowGenerator(data_df, "MinTemp", INPUT_LENGTH, OUTPUT_LENGTH, multimodal=True)
-        return bm_window.plot_violin_dist(True)
 
-    """ Función encargada de generar los dataset como línea de tiempo  """
-    def create_dataset(self, dataset, look_back=1):
-        data_x, data_y = [], []
-        for i in range(len(dataset) - look_back):
-            a = dataset[i:(i + look_back)]
-            data_x.append(a)
-            data_y.append(dataset[i + look_back])
-        return np.array(data_x), np.array(data_y)
+    # Llamado local a la información de datos abiertos
+    def query_local_data(self, start_date="2022-08-01", ending_date="2023-02-02"):
+        print(f"query_local_data(start_date={start_date},ending_date={ending_date})")
+        start_date_ = datetime.strptime(start_date, "%Y-%m-%d")
+        ending_date_ = datetime.strptime(ending_date, "%Y-%m-%d")
+        excel_path = osp.join(Definitions.ROOT_DIR, r'resources\InputData.xlsx')
+        if osp.exists(excel_path):
+            result = pd.read_excel(excel_path, sheet_name='Sheet1', index_col=0)
+            new_result = result[(result.index >= start_date_) & (result.index <= ending_date_)]
+            return new_result
+
+    #Inicia el procesamiento
+    def prepare_window(self, start_date="2022-08-01", ending_date="2023-02-02"):
+        print(f"prepare_window(start_date={start_date},ending_date={ending_date})")
+        # Registros de 24 horas consecutivas a la entrada
+        INPUT_LENGTH = 24
+        # El modelo va a predecir 1 hora a futuro
+        OUTPUT_LENGTH = 1
+        # Variable a predecir
+        Y_FEATURE = "MinTemp"
+
+        model_path = osp.join(Definitions.ROOT_DIR, "resources/models", "temperaturas.h5")
+        print(model_path)
+        self.model_prd = load_model(model_path)
+        print("Model loaded!")
+        #data_df = self.query_data(start_date, ending_date)
+        data_df = self.query_local_data(start_date, ending_date)
+        print("Data ok!")
+
+        if not osp.exists(model_path):
+            raise "El modelo no ha sido entrenado"
+        try:
+            self.bm_window = WindowGenerator(data_df, Y_FEATURE, INPUT_LENGTH, OUTPUT_LENGTH, multimodal=True)
+            print("Window ok!")
+        except Exception as error:
+            print("An exception occurred:", error)
+            return None
+
+    # Generar la predicción con la información de entrada
+    def predict(self):
+        if self.bm_window is not None:
+            self.y_pred = self.bm_window.predict(self.model_prd)
+            return self.y_pred
+
+    # Obtener la ventana actual
+    def get_current_window(self):
+        print("get_current_window -> ")
+        if self.bm_window is not None:
+            print("ok")
+            return self.bm_window
+
+    # Obtener el resultado de la predicción
+    def get_prediction_result(self):
+        if self.bm_window is not None:
+            y = self.bm_window.Y.flatten()
+
+            data = {"Y": y, "Prediccion": self.y_pred}
+            pred_df = pd.DataFrame(data)
+            pred_df["Hora"] = list(range(0, len(self.y_pred)))
+            pred_df["Error"] = pred_df["Y"] - pred_df["Prediccion"]
+
+            return pred_df
+
+    # Evaluar el resultado de la predicción mediante las métricas
+    def evaluate(self):
+        if self.bm_window is not None:
+            metric_df = self.bm_window.evaluate(self.model_prd)
+            return metric_df

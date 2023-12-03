@@ -12,12 +12,15 @@ from back.WindowGenerator import WindowGenerator
 controller = DataController()
 
 
-temp_df = controller.query_data("2022-10-01", "2022-10-31")
+#temp_df = controller.query_data("2023-10-01", "2023-10-15")
+temp_df = controller.query_local_data()
+print(temp_df)
+
 INPUT_LENGTH = 24  # Registros de 24 horas consecutivas a la entrada
 OUTPUT_LENGTH = 1  # El modelo va a predecir 1 hora a futuro
-bm_window = WindowGenerator(temp_df, "MinTemp", INPUT_LENGTH, OUTPUT_LENGTH, multimodal=True)
-print(bm_window.__repr__())
-model_path = osp.join(Definitions.ROOT_DIR, "resources/models", "temperaturas.h5")
+#bm_window = WindowGenerator(temp_df, "MinTemp", INPUT_LENGTH, OUTPUT_LENGTH, multimodal=True)
+#print(bm_window.__repr__())
+#model_path = osp.join(Definitions.ROOT_DIR, "resources/models", "temperaturas.h5")
 
 # print("X escalado")
 # print(bm_window.X_s[0:24])

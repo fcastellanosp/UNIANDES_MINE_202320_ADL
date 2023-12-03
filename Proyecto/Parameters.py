@@ -23,11 +23,16 @@ class Parameters:
         self.station_l3_lbl = "Estación"
         self.default_hour_val = datetime.now()
         self.default_hour_val = self.default_hour_val.replace(hour=12, minute=0, second=0)
-        self.hour_step = 60 * 60
+        # self.hour_step = 60 * 60
         self.init_date_lbl = "Fecha Inicial"
         self.end_date_lbl = "Fecha Final"
-        self.init_date_val = datetime.strptime("2023/10/01", date_format)
-        self.ending_date_val = self.init_date_val + timedelta(days=31)
+        self.init_date_val = datetime.strptime("2023/07/01", date_format)
+        #self.ending_date_val = self.init_date_val + timedelta(days=31)
+        delta_d = (self.default_hour_val - self.init_date_val).days
+        self.ending_date_val = self.init_date_val + timedelta(days=delta_d)
+
+        self.default_init_date_val = datetime.strptime("2022/07/01", date_format)
+        self.default_ending_date_val = self.ending_date_val
 
         # Tooltip de ayuda
         self.form_init_tooltip = "Inicio de los valores de medición a evaluar"

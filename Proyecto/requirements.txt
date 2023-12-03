@@ -4,6 +4,7 @@ keras-preprocessing
 keras-tuner
 matplotlib
 numpy
+openpyxl
 pandas
 plotly
 scikeras[tensorflow]

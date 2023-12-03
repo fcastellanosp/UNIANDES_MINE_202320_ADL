@@ -125,6 +125,7 @@ class WindowGenerator:
         return result_df, title
 
     def create_supervised_dataset(self, array):
+        print("create_supervised_dataset ->")
         ''' Prepara la información con las entradas y salidas para la red LSTM
     - array: arreglo numpy de tamaño N x features (N: cantidad de datos,
       f: cantidad de features)
@@ -182,6 +183,7 @@ class WindowGenerator:
         print(f'* Max X con escalamiento: {self.X_s.max()}')
 
     def scale_y_dataset(self):
+        print("scale_y_dataset ->")
         self.Y_s = np.zeros(self.Y.shape)
         self.Y_s[:, :, 0] = self.scalers[-1].fit_transform(self.Y[:, :, 0])
 
@@ -193,6 +195,7 @@ class WindowGenerator:
         print(f'* Max Y con escalamiento: {self.Y_s.max()}')
 
     def set_model(self, model):
+        print("set_model ->")
         self.model = None
 
         if model is None:
@@ -216,6 +219,7 @@ class WindowGenerator:
         return self.y_pred
 
     def get_error_predictions(self, model):
+        print("get_error_predictions ->")
         ''' Visualiza una gráfica de los errores simples que presentan las predicciones
     '''
         # if str(self.model) == 'None' or str(self.y_pred) == 'None':
@@ -232,6 +236,7 @@ class WindowGenerator:
         return pred_errors
 
     def evaluate(self, model=None):
+        print("evaluate ->")
         self.set_model(model)
 
         metric_names = ["RMSE"]
@@ -246,4 +251,5 @@ class WindowGenerator:
         return result_df
 
     def get_scaler(self):
+        print("get_scaler() ->")
         return self.scalers[-1]
