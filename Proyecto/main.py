@@ -1,6 +1,5 @@
 import Definitions
-import folium
-import folium.plugins as fp
+import numpy as np
 import pandas as pd
 import os.path as osp
 import plotly.express as px
@@ -9,7 +8,7 @@ import streamlit as st
 from keras.models import load_model
 import tensorflow as tf
 
-# from streamlit_folium import st_folium
+from sklearn.preprocessing import MinMaxScaler
 
 from Parameters import Parameters
 from back.DataController import DataController
@@ -31,18 +30,6 @@ if "zoom" not in st.session_state:
 
 # st.title(" 📰 {}".format(lbl.main_title))
 st.set_page_config(page_icon="🌡️", layout="wide", initial_sidebar_state="expanded")
-
-def get_prediction(data):
-    title, model_dates, X_Real_val, trainPredictPlot, \
-        testPredictPlot, metrics = controller.predict(data, station_code=station_sel, hour=hour_sel)
-
-    pred_fig = go.Figure()
-    pred_fig.add_trace(go.Scatter(x=model_dates, y=X_Real_val, mode='lines+markers', name='Real'))
-    pred_fig.add_trace(go.Scatter(x=model_dates, y=trainPredictPlot, mode='lines+markers', name='Estimado'))
-    pred_fig.add_trace(go.Scatter(x=model_dates, y=testPredictPlot, mode='lines+markers', name='Predecido'))
-    pred_fig.update_layout(title=title, xaxis_title='Dia', yaxis_title='Temperatura')
-
-    return pred_fig, metrics
 
 # Visualizar las estaciones actuales
 def show_stations(l1_sel, l2_sel, l3_sel):
@@ -74,6 +61,8 @@ with st.form(key='FilterForm'):
 
             initial_date_sel = initial_date.strftime("%Y-%m-%d")
             ending_date_sel = ending_date.strftime("%Y-%m-%d")
+            pred_error_msg = "No fue posible generar la predicción con los parámetros indicados"
+            # prd_scaler = MinMaxScaler(feature_range=(-1, 1))
 
             input_data_ok = True
             date_diff = ending_date - initial_date
@@ -85,6 +74,7 @@ with st.form(key='FilterForm'):
             if input_data_ok:
                 with st.spinner("Procesando datos...."):
                     temp_df = controller.query_data(initial_date_sel, ending_date_sel)
+                    # prd_scaler.fit_transform(temp_df[["MinTemp"]])
                     INPUT_LENGTH = 24  # Registros de 24 horas consecutivas a la entrada
                     OUTPUT_LENGTH = 1  # El modelo va a predecir 1 hora a futuro
                     bm_window = WindowGenerator(temp_df, "MinTemp", INPUT_LENGTH, OUTPUT_LENGTH, multimodal=True)
@@ -95,61 +85,114 @@ with st.form(key='FilterForm'):
                     model_prd = load_model(model_path)
 
                     with row_01_col1:
-                        ":cold_face Temperatura :hot_face"
-                        st.caption("Observaciones de temperatura")
+                        ":thermometer: Observaciones de temperatura"
                         temp_fig = px.line(temp_df, x=temp_df.index, y="MinTemp", title='Temperaturas')
                         st.plotly_chart(temp_fig)
 
                     # "Datos de las temperaturas"
                     with row_01_col2:
-                        ":memo: Distribución de los datos de entrada"
-                        st.pyplot(bm_window.plot_violin_dist(True))
+                        ":memo: Variables y covariables"
+                        st.dataframe(temp_df)
 
                     with row_02_col1:
-                        ":memo: Ejemplo de ventana de tiempo"
-                        st.pyplot(bm_window.plot_train_sample())
+                        ":violin: Distribución de los datos de entrada"
+                        # st.pyplot(bm_window.plot_violin_dist(True))
+
+                        violin_fig = px.violin(temp_df, box=True)
+                        st.plotly_chart(violin_fig)
 
                     with row_02_col2:
-                        ":chart_with_upwards_trend: Métricas"
+                        ":window: Ejemplo de ventana de tiempo :window:"
+                        window_df, title = bm_window.plot_train_sample()
 
-                        rmse_tr, rmse_vl, rmse_ts = bm_window.evaluate(model_prd)
-                        st.text("row_03_col2")
-                        st.text(f'  RMSE train:\t {rmse_tr:.3f}')
-                        st.text(f'  RMSE val:\t {rmse_vl:.3f}')
-                        st.text(f'  RMSE test:\t {rmse_ts:.3f}')
+                        window_fig = go.Figure()
+                        window_fig.add_trace(go.Scatter(x=window_df["X"], y=window_df["Y"],
+                                                      mode='lines+markers',
+                                                      name='Valores'))
+                        window_fig.add_trace(go.Scatter(x=window_df.index, y=window_df["Mean"],
+                                                      mode='lines+markers',
+                                                      name='Promedio'))
 
-                    pred_error_msg = "No fue posible generar la predicción con los parámetros indicados"
+                        window_fig.update_layout(title=title,
+                                               xaxis_title=param.x_label,
+                                               yaxis_title=param.y_label)
+                        st.plotly_chart(window_fig)
+
                     with row_03_col1:
                         try:
-                            ":chart_with_upwards_trend: Predicciones"
+                            ":chart_with_upwards_trend: Predicciones :chart_with_upwards_trend:"
                             print("Predicciones")
-                            y_pred_s = model_prd.predict(bm_window.X_test, verbose=0)
-                            print(y_pred_s.flatten())
-                            print("Predicciones OK")
-                            column_values = ['value']
-                            df = pd.DataFrame(data=y_pred_s, columns=column_values)
-                            df.reset_index()
-                            print(df.dtypes)
-                            print(df.index)
-                            print(df["value"])
-                            fig = px.line(df, x=df.index, y="value", title='Temperatura')
-                            st.pyplot(fig)
-                        except:
-                            pred_error_msg
+                            #y_pred_s = model_prd.predict(bm_window.X_test, verbose=0)
+                            y_pred = bm_window.predict(model_prd)
+                            print(y_pred.shape)
+                            print(bm_window.y_ts.shape)
+                            print(y_pred)
+                            print(y_pred.flatten())
+                            #y_pred = prd_scaler.inverse_transform(y_pred_s)
+                            #y_pred = bm_window.scaler.inverse_transform(y_pred_s)
+                            #print("Escalado ok")
+                            #print(y_pred)
+                            #y_pred = list(y_pred.flatten())
+                            #print(y_pred)
+
+                            print(bm_window.y_ts)
+                            #y = bm_window.scaler.inverse_transform(bm_window.y_ts[:, :, 0])
+                            print("Datos escalados")
+                            y = bm_window.y_ts.flatten()
+                            print(y)
+                            print("Flatten ok")
+                            data = {"Y": y, "Prediccion": y_pred}
+                            pred_df = pd.DataFrame(data)
+                            pred_df["Hora"] = list(range(0, len(y_pred)))
+                            pred_df["Error"] = pred_df["Y"] - pred_df["Prediccion"]
+
+                            pred_fig = go.Figure()
+                            pred_fig.add_trace(go.Scatter(x=pred_df.index, y=pred_df["Y"],
+                                                     mode='lines+markers',
+                                                     name='Real'))
+                            pred_fig.add_trace(go.Scatter(x=pred_df.index, y=pred_df["Prediccion"],
+                                                     mode='lines+markers',
+                                                     name='Predicción'))
+
+                            pred_fig.update_layout(title='Prediction to 1 hour',
+                                              xaxis_title=param.x_label,
+                                              yaxis_title=param.y_label)
+
+                            st.plotly_chart(pred_fig)
+                        except Exception as error:
+                            #print("An exception occurred:", error)
+                            st.text(pred_error_msg)
+                            st.text(error)
+
 
                     with row_03_col2:
                         ""
                         try:
                             #st.dataframe(metrics)
+                            ":warning: Error en las predicciones :warning:"
                             print("Inicia predicción")
                             bm_window.predict(model_prd)
                             print("Visualiza predicción")
-                            st.pyplot(bm_window.plot_error_predictions())
-                        except:
-                            pred_error_msg
+                            errors = bm_window.get_error_predictions(model_prd)
+
+                            error_data = {"Error": errors}
+                            pred_error_df = pd.DataFrame(error_data)
+                            pred_error_df["Hora"] = list(range(0, len(errors)))
+                            pred_error_fig = px.line(pred_error_df, x="Hora", y="Error", title='Temperatura')
+                            pred_error_fig.update_layout(title='Prediction to 1 hour',
+                                              xaxis_title=param.x_label,
+                                              yaxis_title=param.y_error_label)
+                            st.plotly_chart(pred_error_fig)
+                        except Exception as error:
+                            st.text(pred_error_msg)
+                            st.text(error)
+
+                    with row_04_col1:
+                        ":chart_with_downwards_trend: Métricas :chart_with_downwards_trend:"
+                        metric_df = bm_window.evaluate(model_prd)
+                        st.dataframe(metric_df)
             else:
                 st.info('Parámetros incompletos', icon="ℹ")
-
 
     with row_04_col2:
         with st.expander("Mas Información"):
@@ -160,33 +203,19 @@ with st.form(key='FilterForm'):
 
             st.info(
                 f"""
-                [Entrenamiento] Tomado de la información del año 2020 al año 2021 para los datos de temperatura mínima 
+                [Entrenamiento] Tomado de la información del año 2021 al año 2022 para los datos de temperatura mínima 
                 del aire a 2 metros.
                 © Datos de estaciones de IDEAM compartidos en {controller.open_data_host}
                 """
             )
 
             """
-            Los modelos fueron entrenados mediante redes recurrentes LSTM con una ventana de 1 día seoarado por intervalos de hora, permitiendo buscar
+            Los modelos fueron entrenados mediante una red recurrentes LSTM multivariada unistep con una ventanas separada por intervalos de hora, permitiendo buscar
             sobre los datos distintas tendencias que pudiera presentar la temperatura mínima en el aite a 2 metros.
-            """
-
-            """
-            Estos modelos tienen la capacidad de capturar patrones complejos en los datos y generar predicciones precisas. 
-            Esto sugiere que los modelos LSTM pueden ser una herramienta útil para estudiar y predecir el clima en otras 
-            regiones o para analizar diferentes variables climáticas.
-            """
-
-            """
-            Los resultados obtenidos en este proyecto resaltan la importancia de monitorear y comprender los cambios en la 
-            temperatura mínima en Colombia. Estos cambios pueden tener impactos significativos en diferentes aspectos, como 
-            la agricultura, la salud pública y los ecosistemas. El análisis de la variación temporal de la temperatura 
-            mínima proporciona información valiosa para comprender mejor el clima y tomar decisiones informadas 
-            en áreas relacionadas.        
             """
 
             st.info(
                 """
-                [Código Fuente GitHub](https://github.com/fcastellanosp/UNIANDES_MINE_202310_AML/tree/main/Proyecto)
+                [Código Fuente GitHub](https://github.com/fcastellanosp/UNIANDES_MINE_202320_ADL/tree/main/Proyecto)
                 """
             )

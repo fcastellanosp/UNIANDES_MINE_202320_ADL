@@ -9,9 +9,6 @@ from back.WindowGenerator import WindowGenerator
 
 from datetime import datetime
 from datetime import timedelta
-from keras.models import load_model
-from sklearn.metrics import mean_squared_error, r2_score,mean_absolute_error
-from sklearn.preprocessing import MinMaxScaler
 from sodapy import Socrata
 
 
@@ -184,91 +181,6 @@ class DataController:
         OUTPUT_LENGTH = 1    # El modelo va a predecir 1 hora a futuro
         bm_window = WindowGenerator(data_df, "MinTemp", INPUT_LENGTH, OUTPUT_LENGTH, multimodal=True)
         return bm_window.plot_violin_dist(True)
-
-    def predict(self, data, station_code="0021205012", hour=12):
-        model_name = f"{station_code}_h{hour}"
-        model_path = osp.join(Definitions.ROOT_DIR, "resources/models", f"{model_name}.h5")
-        # print(model_path)
-
-        # data["observacion_normalizada"] = self.prd_scaler.fit_transform(data[["observacion"]])
-        prd_scaler = MinMaxScaler(feature_range=(0, 1))
-        prd_scaler.fit_transform(data[["observacion"]])
-
-        # Asegurar tratamiento de datos con la hora seleccionada
-        # data = data[data["hora"] == hour]
-        data_v_df = pd.pivot_table(data, aggfunc='sum', columns='fecha', index=['hora'],
-                                   values='observacion', fill_value=np.nan)
-
-        # Imputación
-        data_v_df = data_v_df.fillna(method='ffill', axis=1)
-        data_v_df = data_v_df.fillna(method='bfill', axis=1)
-
-        # Fechas
-        input_dates = data_v_df.columns
-
-        x_real_val = data_v_df.loc[hour, input_dates].values.astype('float32')
-
-        dataset = prd_scaler.fit_transform(np.reshape(x_real_val, (-1, 1)))
-        dataset = np.reshape(dataset, (-1))
-        print(dataset)
-        train, test = dataset[:-31], dataset[-46:]
-
-        past, future = 8, 1
-        x_train, y_train = self.create_dataset(train, past)
-        print(x_train)
-        print(y_train)
-        x_test, y_test = self.create_dataset(test, past)
-        print(x_test)
-        print(y_test)
-
-        x_train = np.reshape(x_train, (x_train.shape[0], 1, x_train.shape[1]))
-        x_test = np.reshape(x_test, (x_test.shape[0], 1, x_test.shape[1]))
-
-        if not osp.exists(model_path):
-            raise "El modelo no ha sido entrenado"
-        model_prd = load_model(model_path)
-
-        # Predicciones
-        train_predict = model_prd.predict(x_train)
-        test_predict = model_prd.predict(x_test)
-        metrics = pd.DataFrame(index=['Error Cuadrático Medio - MSE', 'Desviación media cuadrática - RMSE', 'Error absoluto medio - MAE', 'R2'], columns=['Entrenamiento', 'Prueba'])
-        # Los datos estaban escalados
-        train_predict = prd_scaler.inverse_transform(train_predict)
-        train_y = prd_scaler.inverse_transform([y_train])
-        test_predict = prd_scaler.inverse_transform(test_predict)
-        test_y = prd_scaler.inverse_transform([y_test])
-        # Calcular MSE
-        train_score = mean_squared_error(train_y[0], train_predict[:, 0])
-        metrics.at['Error Cuadrático Medio - MSE', 'Entrenamiento'] = '{:.2f}'.format(train_score)
-        test_score = mean_squared_error(test_y[0], test_predict[:, 0])
-        metrics.at['Error Cuadrático Medio - MSE', 'Prueba'] = '{:.2f}'.format(test_score)
-        # Calcular RMSE
-        train_score = math.sqrt(mean_squared_error(train_y[0], train_predict[:, 0]))
-        metrics.at['Desviación media cuadrática - RMSE', 'Entrenamiento'] = '{:.2f}'.format(train_score)
-        test_score = math.sqrt(mean_squared_error(test_y[0], test_predict[:, 0]))
-        metrics.at['Desviación media cuadrática - RMSE', 'Prueba'] = '{:.2f}'.format(test_score)
-        # Calcular r2
-        train_score = r2_score(train_y[0], train_predict[:, 0])
-        metrics.at['R2', 'Entrenamiento'] = '{:.2f}'.format(train_score)
-        test_score = r2_score(test_y[0], test_predict[:, 0])
-        metrics.at['R2', 'Prueba'] = '{:.2f}'.format(test_score)
-        # Calcular MAE
-        train_score = mean_absolute_error(train_y[0], train_predict[:, 0])
-        metrics.at['Error absoluto medio - MAE', 'Entrenamiento'] = '{:.2f}'.format(train_score)
-        test_score = mean_absolute_error(test_y[0], test_predict[:, 0])
-        metrics.at['Error absoluto medio - MAE', 'Prueba'] = '{:.2f}'.format(test_score)
-
-        # Datos de entrenamiento para presentación de resultados
-        train_predict_plot = np.empty_like(dataset)
-        train_predict_plot[:] = np.nan
-        train_predict_plot[past:len(train_predict) + past] = np.reshape(train_predict, -1)
-        # Datos de prueba para presentación de resultados
-        test_predict_plot = np.empty_like(dataset)
-        test_predict_plot[:] = np.nan
-        test_predict_plot[len(train_predict):len(dataset) - 1] = np.reshape(test_predict, -1)
-
-        title = f"Prediccción con {model_prd.name}, ventana [{past} días]"
-        return title, input_dates, x_real_val, train_predict_plot, test_predict_plot, metrics
 
     """ Función encargada de generar los dataset como línea de tiempo  """
     def create_dataset(self, dataset, look_back=1):

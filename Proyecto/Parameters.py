@@ -26,7 +26,7 @@ class Parameters:
         self.hour_step = 60 * 60
         self.init_date_lbl = "Fecha Inicial"
         self.end_date_lbl = "Fecha Final"
-        self.init_date_val = datetime.strptime("2022/08/01", date_format)
+        self.init_date_val = datetime.strptime("2022/10/01", date_format)
         self.ending_date_val = self.init_date_val + timedelta(days=90)
 
         # Tooltip de ayuda
@@ -38,5 +38,7 @@ class Parameters:
         self.hour_tooltip = "Hora de toma del dato a evaluar"
 
         # Para el análisis
-        self.min_instances = 150
-        self.columns_sel = ["codigo", "departamento", "municipio", "nombre", "categoria", "altitud"]
+        self.min_instances = 30
+        self.x_label = "Time [h]"
+        self.y_label = "Temperature °C"
+        self.y_error_label = "Error"
