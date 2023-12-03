@@ -26,7 +26,7 @@ class Parameters:
         self.hour_step = 60 * 60
         self.init_date_lbl = "Fecha Inicial"
         self.end_date_lbl = "Fecha Final"
-        self.init_date_val = datetime.strptime("2022/10/01", date_format)
+        self.init_date_val = datetime.strptime("2023/10/01", date_format)
         self.ending_date_val = self.init_date_val + timedelta(days=31)
 
         # Tooltip de ayuda
