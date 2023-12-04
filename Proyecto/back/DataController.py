@@ -199,7 +199,7 @@ class DataController:
         # Variable a predecir
         Y_FEATURE = "MinTemp"
 
-        model_path = osp.join(Definitions.ROOT_DIR, "resources/models", "temperaturas.h5")
+        model_path = osp.join(Definitions.ROOT_DIR, "resources/models", "Hp_Multivar_Unistep_1hour.h5")
         print(model_path)
         self.model_prd = load_model(model_path)
         print("Model loaded!")
