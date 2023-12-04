@@ -22,11 +22,11 @@ class Parameters:
         self.station_l2_lbl = "Municipio"
         self.station_l3_lbl = "Estación"
         self.default_hour_val = datetime.now()
-        self.default_hour_val = self.default_hour_val.replace(hour=12, minute=0, second=0)
+        self.default_hour_val = self.default_hour_val.replace(hour=23, minute=59, second=59)
         # self.hour_step = 60 * 60
         self.init_date_lbl = "Fecha Inicial"
         self.end_date_lbl = "Fecha Final"
-        self.init_date_val = datetime.strptime("2023/07/01", date_format)
+        self.init_date_val = datetime.strptime("2023/08/01", date_format)
         #self.ending_date_val = self.init_date_val + timedelta(days=31)
         delta_d = (self.default_hour_val - self.init_date_val).days
         self.ending_date_val = self.init_date_val + timedelta(days=delta_d)
@@ -43,7 +43,7 @@ class Parameters:
         self.hour_tooltip = "Hora de toma del dato a evaluar"
 
         # Para el análisis
-        self.min_instances = 30
+        self.min_instances = 14
         self.x_label = "Time [h]"
         self.y_label = "Temperature °C"
         self.y_error_label = "Error"

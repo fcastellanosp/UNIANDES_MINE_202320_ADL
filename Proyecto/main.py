@@ -49,82 +49,86 @@ with st.form(key='FilterForm'):
                 input_data_ok = False
 
             print(f"input_data_ok: {input_data_ok}")
-            controller.prepare_window(initial_date_sel, ending_date_sel)
-            data_df = controller.get_current_window().data_df
 
-            if input_data_ok and data_df is None:
-                st.info('No hay datos', icon="ℹ")
-            elif controller.get_current_window() is not None:
-                with st.spinner("Procesando datos...."):
-                    y_pred = controller.predict()
-                    pred_df = controller.get_prediction_result()
-                    metric_df = controller.evaluate()
-
-                    with row_01_col1:
-                        ":thermometer: Observaciones de temperatura"
-                        temp_fig = px.line(data_df, x=data_df.index, y="MinTemp", title='Temperaturas')
-                        st.plotly_chart(temp_fig)
-
-                    # "Datos de las temperaturas"
-                    with row_01_col2:
-                        ":memo: Variables y covariables"
-                        st.dataframe(data_df)
-
-                    with row_02_col1:
-                        ":violin: Distribución de los datos de entrada"
-                        violin_fig = px.violin(controller.get_current_window().data_s_df, box=False)
-                        st.plotly_chart(violin_fig)
-
-                    with row_02_col2:
-                        ":window: Ejemplo de ventana de tiempo :window:"
-                        window_df, title = controller.get_current_window().plot_train_sample()
-
-                        window_fig = go.Figure()
-                        window_fig.add_trace(go.Scatter(x=window_df["X"], y=window_df["Y"],
-                                                      mode='lines+markers',
-                                                      name='Valores'))
-                        window_fig.add_trace(go.Scatter(x=window_df.index, y=window_df["Mean"],
-                                                      mode='lines+markers',
-                                                      name='Promedio'))
-
-                        window_fig.update_layout(title=title, xaxis_title=param.x_label, yaxis_title=param.y_label)
-                        st.plotly_chart(window_fig)
-
-                    with row_03_col1:
-                        try:
-                            ":chart_with_upwards_trend: Predicciones :chart_with_upwards_trend:"
-                            pred_fig = go.Figure()
-                            pred_fig.add_trace(go.Scatter(x=pred_df["Hora"], y=pred_df["Y"],
-                                                     mode='lines+markers',
-                                                     name='Real'))
-                            pred_fig.add_trace(go.Scatter(x=pred_df["Hora"], y=pred_df["Prediccion"],
-                                                     mode='lines+markers',
-                                                     name='Predicción'))
-
-                            pred_fig.update_layout(title='Prediction to 1 hour', xaxis_title=param.x_label, yaxis_title=param.y_label)
-
-                            st.plotly_chart(pred_fig)
-                        except Exception as error:
-                            print("An exception occurred:", error)
-                            st.text(pred_error_msg)
-                            st.text(error)
-
-                    with row_03_col2:
-                        ""
-                        try:
-                            ":warning: Error en las predicciones :warning:"
-                            pred_error_fig = px.line(pred_df, x="Hora", y="Error", title='Temperatura')
-                            pred_error_fig.update_layout(title='Prediction to 1 hour', xaxis_title=param.x_label, yaxis_title=param.y_error_label)
-                            st.plotly_chart(pred_error_fig)
-                        except Exception as error:
-                            st.text(pred_error_msg)
-                            st.text(error)
-
-                    with row_04_col1:
-                        ":chart_with_downwards_trend: Métricas :chart_with_downwards_trend:"
-                        st.dataframe(metric_df)
+            if not input_data_ok:
+                st.warning(f'Las fechas seleccionadas son válidas, debe seleccionar un rango con mínimo ({param.min_instances}) día(s) de diferencia', icon="🚨")
             else:
-                st.info('Parámetros incompletos', icon="ℹ")
+                with st.spinner("Procesando datos...."):
+                    controller.prepare_window(initial_date_sel, ending_date_sel)
+                    try:
+                        data_df = controller.get_current_window().data_df
+
+                        y_pred = controller.predict()
+                        pred_df = controller.get_prediction_result()
+                        metric_df = controller.evaluate()
+
+                        with row_01_col1:
+                            ":thermometer: Observaciones de temperatura"
+                            temp_fig = px.line(data_df, x=data_df.index, y="MinTemp", title='Temperaturas')
+                            st.plotly_chart(temp_fig)
+
+                        # "Datos de las temperaturas"
+                        with row_01_col2:
+                            ":memo: Variables y covariables"
+                            st.dataframe(data_df)
+
+                        with row_02_col1:
+                            ":violin: Distribución de los datos de entrada"
+                            violin_fig = px.violin(controller.get_current_window().data_s_df, box=False)
+                            st.plotly_chart(violin_fig)
+
+                        with row_02_col2:
+                            ":window: Ejemplo de ventana de tiempo :window:"
+                            window_df, title = controller.get_current_window().plot_train_sample()
+
+                            window_fig = go.Figure()
+                            window_fig.add_trace(go.Scatter(x=window_df["X"], y=window_df["Y"],
+                                                            mode='lines+markers',
+                                                            name='Valores'))
+                            window_fig.add_trace(go.Scatter(x=window_df.index, y=window_df["Mean"],
+                                                            mode='lines+markers',
+                                                            name='Promedio'))
+
+                            window_fig.update_layout(title=title, xaxis_title=param.x_label, yaxis_title=param.y_label)
+                            st.plotly_chart(window_fig)
+
+                        with row_03_col1:
+                            try:
+                                ":chart_with_upwards_trend: Predicciones :chart_with_upwards_trend:"
+                                pred_fig = go.Figure()
+                                pred_fig.add_trace(go.Scatter(x=pred_df["Hora"], y=pred_df["Y"],
+                                                              mode='lines+markers',
+                                                              name='Real'))
+                                pred_fig.add_trace(go.Scatter(x=pred_df["Hora"], y=pred_df["Prediccion"],
+                                                              mode='lines+markers',
+                                                              name='Predicción'))
+
+                                pred_fig.update_layout(title='Prediction to 1 hour', xaxis_title=param.x_label,
+                                                       yaxis_title=param.y_label)
+
+                                st.plotly_chart(pred_fig)
+                            except Exception as error:
+                                print("An exception occurred:", error)
+                                st.text(pred_error_msg)
+                                st.text(error)
+
+                        with row_03_col2:
+                            ""
+                            try:
+                                ":warning: Error en las predicciones :warning:"
+                                pred_error_fig = px.line(pred_df, x="Hora", y="Error", title='Temperatura')
+                                pred_error_fig.update_layout(title='Prediction to 1 hour', xaxis_title=param.x_label,
+                                                             yaxis_title=param.y_error_label)
+                                st.plotly_chart(pred_error_fig)
+                            except Exception as error:
+                                st.text(pred_error_msg)
+                                st.text(error)
+
+                        with row_04_col1:
+                            ":chart_with_downwards_trend: Métricas :chart_with_downwards_trend:"
+                            st.dataframe(metric_df)
+                    except:
+                        st.warning('No hay datos para las fechas seleccionadas', icon="🚨")
 
     with row_04_col2:
         with st.expander("Mas Información"):
