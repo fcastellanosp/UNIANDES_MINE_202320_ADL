@@ -115,7 +115,7 @@ with st.form(key='FilterForm'):
                         with row_03_col2:
                             ""
                             try:
-                                ":warning: Error en las predicciones :warning:"
+                                ":warning: Gráfico de error en las predicciones :warning:"
                                 pred_error_fig = px.line(pred_df, x="Hora", y="Error", title='Temperatura')
                                 pred_error_fig.update_layout(title='Prediction to 1 hour', xaxis_title=param.x_label,
                                                              yaxis_title=param.y_error_label)
