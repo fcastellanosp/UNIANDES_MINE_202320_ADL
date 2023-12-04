@@ -183,7 +183,7 @@ class DataController:
         print(f"query_local_data(start_date={start_date},ending_date={ending_date})")
         start_date_ = datetime.strptime(start_date, "%Y-%m-%d")
         ending_date_ = datetime.strptime(ending_date, "%Y-%m-%d")
-        excel_path = osp.join(Definitions.ROOT_DIR, r'resources\InputData.xlsx')
+        excel_path = osp.join(Definitions.ROOT_DIR, 'resources/InputData.xlsx')
         if osp.exists(excel_path):
             result = pd.read_excel(excel_path, sheet_name='Sheet1', index_col=0)
             new_result = result[(result.index >= start_date_) & (result.index <= ending_date_)]
