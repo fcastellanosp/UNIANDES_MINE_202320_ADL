@@ -127,7 +127,8 @@ with st.form(key='FilterForm'):
                         with row_04_col1:
                             ":chart_with_downwards_trend: Métricas :chart_with_downwards_trend:"
                             st.dataframe(metric_df)
-                    except:
+                    except Exception as error:
+                        print("An exception occurred:", error)
                         st.warning('No hay datos para las fechas seleccionadas', icon="🚨")
 
     with row_04_col2:
